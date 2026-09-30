@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kuis Sistem Akuisisi Data (DAS) - Pertemuan 2</title>
+<style>
+:root{--navy:#14284b;--blue:#1f4e8c;--bg:#f3f5fa;--ok:#1a7f4b;--bad:#c0392b;--line:#d5dbe8}
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#1c2333;line-height:1.5}
+header{background:var(--navy);color:#fff;padding:18px 16px;text-align:center}
+header h1{margin:0;font-size:1.25rem}header p{margin:4px 0 0;font-size:.85rem;opacity:.85}
+main{max-width:820px;margin:18px auto;padding:0 14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px}
+label{display:block;font-weight:600;margin:12px 0 4px;font-size:.9rem}
+input,select{width:100%;padding:10px;border:1px solid #b9c3d8;border-radius:6px;font-size:1rem}
+button{background:var(--blue);color:#fff;border:0;border-radius:6px;padding:10px 18px;font-size:.95rem;cursor:pointer}
+button:hover{background:var(--navy)}button.sec{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+button:disabled{opacity:.4;cursor:default}
+.bar{height:8px;background:#e1e6f1;border-radius:4px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--blue);width:0}
+.opt{display:block;width:100%;text-align:left;background:#fff;color:#1c2333;border:1px solid #b9c3d8;margin:8px 0;padding:12px}
+.opt:hover{background:#eaf0fb}.opt.sel{background:#dce8fb;border-color:var(--blue);font-weight:600}
+.grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.grid b{width:32px;height:32px;line-height:30px;text-align:center;border:1px solid #b9c3d8;border-radius:5px;font-size:.8rem;cursor:pointer;background:#fff}
+.grid b.done{background:var(--blue);color:#fff}.grid b.now{outline:2px solid var(--navy)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:14px}
+.score{text-align:center}.score .n{font-size:3rem;font-weight:700;color:var(--navy)}
+.meta td{padding:2px 10px 2px 0}
+.rv{border-left:5px solid var(--line);padding:10px 14px;margin:12px 0;background:#fafbfd;border-radius:0 8px 8px 0;page-break-inside:avoid}
+.rv.ok{border-color:var(--ok)}.rv.no{border-color:var(--bad)}
+.rv li{margin:2px 0}.rv .c{color:var(--ok);font-weight:700}.rv .w{color:var(--bad);font-weight:700}
+.exp{background:#eef3fb;padding:8px 10px;border-radius:6px;margin-top:6px;font-size:.92rem}
+.hide{display:none}.warn{color:var(--bad);font-size:.9rem;margin-top:8px}
+@media print{header p,.noprint{display:none!important}body{background:#fff}.card{border:0;padding:0}main{margin:0;max-width:none}header{-webkit-print-color-adjust:exact;print-color-adjust:exact}.rv,.exp{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<header><h1>Kuis Cetak Biru Sistem Akuisisi Data (DAS)</h1><p>Sistem Instrumentasi - Pertemuan 2: Interface I/O &amp; Sinyal Instrumentasi</p></header>
+<main>
+<section id="login" class="card noprint">
+ <h2 style="margin-top:0;color:var(--navy)">Identitas Peserta</h2>
+ <label for="nama">Nama Lengkap</label><input id="nama" autocomplete="off">
+ <label for="nim">NIM</label><input id="nim" inputmode="numeric" autocomplete="off">
+ <label for="prodi">Program Studi</label>
+ <select id="prodi"><option value="">-- Pilih Program Studi --</option><option>Teknik Elektro</option><option>Sistem Informasi</option><option>Teknik Informatika</option><option>Sistem Informasi Akuntansi</option><option>Manajemen Informatika</option><option>Komputerisasi Akuntansi</option><option>Lainnya</option></select>
+ <p style="font-size:.88rem;color:#555">30 soal pilihan ganda. Satu NIM hanya dapat mengerjakan satu kali. Hasil dapat disimpan sebagai PDF.</p>
+ <button id="start">Mulai Kuis</button><div id="err" class="warn"></div>
+</section>
+<section id="quiz" class="card hide noprint">
+ <div style="display:flex;justify-content:space-between;font-size:.9rem"><span id="who"></span><span id="cnt"></span></div>
+ <div class="bar"><i id="pb"></i></div>
+ <h3 id="qt" style="margin:14px 0 6px"></h3><div id="ops"></div>
+ <div class="nav"><button class="sec" id="prev">Sebelumnya</button><button id="next">Berikutnya</button></div>
+ <div class="grid" id="grid"></div>
+</section>
+<section id="result" class="card hide"></section>
+</main>
+<script>
+// [pertanyaan, jawaban benar, salah1, salah2, salah3, pembahasan]
+const Q=[
+["Mengapa komputer digital disebut \"buta\" terhadap dunia nyata?","Komputer hanya memahami data digital diskrit (0 dan 1), sedangkan dunia nyata berupa sinyal analog kontinu","Komputer tidak memiliki memori","Komputer tidak dapat melakukan perhitungan","Komputer hanya bekerja pada tegangan tinggi","Besaran fisik seperti suhu, tekanan, dan cahaya bersifat analog kontinu, sedangkan komputer hanya mengolah 0 dan 1. Perbedaan \"bahasa\" inilah yang membuat komputer membutuhkan jembatan."],
+["Manakah yang termasuk besaran fisik analog yang bersifat kontinu?","Suhu, tekanan, dan intensitas cahaya","Bit 0 dan 1","Alamat 2-bit pada decoder","Data biner hasil ADC","Suhu, tekanan, dan cahaya berubah secara halus dan kontinu. Bit, alamat biner, dan hasil ADC sudah berupa data digital diskrit."],
+["Apa peran utama Data Acquisition System (DAS)?","Menjembatani dunia fisik analog dengan komputer digital","Menyimpan data di cloud","Mempercepat prosesor komputer","Menggantikan fungsi sistem operasi","DAS menerjemahkan besaran fisik menjadi data digital untuk komputer dan (pada sisi output) menerjemahkan perintah digital menjadi aksi fisik."],
+["Manakah urutan rantai sistem akuisisi dan kontrol yang benar?","Sensor - MUX - Amp - ADC - PC - DAC - Aktuator","Sensor - ADC - MUX - Amp - PC - DAC - Aktuator","Sensor - Amp - PC - MUX - ADC - DAC - Aktuator","Aktuator - DAC - PC - ADC - Amp - MUX - Sensor","Sinyal dari sensor dipilih oleh MUX, dikuatkan Amp, didigitalkan ADC, diproses PC, lalu dikembalikan ke analog oleh DAC untuk menggerakkan aktuator."],
+["Pernyataan yang tepat tentang DAS sebagai \"jembatan dua arah\" adalah...","Rantai input mengubah besaran fisik menjadi data digital, rantai output mengubah perintah digital menjadi aksi fisik","Semua komponen hanya bekerja dari sensor ke komputer","DAS hanya berupa satu chip tunggal","DAS hanya digunakan untuk menampilkan data pada layar","DAS adalah serangkaian komponen fungsional dengan dua arah: sistem akuisisi (input) dan sistem distribusi (output)."],
+["Fungsi utama Multiplexer (MUX) analog dalam DAS adalah...","Memilih satu input dari banyak sumber sinyal","Mengubah digital menjadi analog","Menyimpan output komputer","Menguatkan sinyal sensor","MUX bertindak sebagai saklar elektronik cerdas yang meneruskan satu kanal saja dari banyak sensor ke tahap berikutnya."],
+["Mengapa 4 sensor tidak memerlukan 4 ADC terpisah?","Karena MUX memilih kanal secara bergantian sehingga satu ADC dapat dipakai bersama","Karena sensor sudah berupa sinyal digital","Karena ADC dapat membaca semua kanal sekaligus tanpa batas","Karena komputer dapat membaca sinyal analog langsung","Dengan MUX, hanya satu kanal yang diteruskan pada satu waktu, sehingga satu ADC cukup dan biaya perangkat lebih hemat."],
+["Berapa jumlah kanal maksimum yang dapat dipilih oleh decoder alamat 2-bit?","4 kanal","2 kanal","8 kanal","16 kanal","Jumlah kombinasi n bit adalah 2^n. Untuk 2 bit: 2^2 = 4 kanal (00, 01, 10, 11)."],
+["Pada MUX 4 kanal (0: Suhu, 1: Tekanan, 2: Cahaya, 3: Arus), decoder menerima alamat 10. Kanal yang diteruskan adalah...","Sensor 2 (Cahaya)","Sensor 0 (Suhu)","Sensor 1 (Tekanan)","Sensor 3 (Arus)","Biner 10 sama dengan desimal 2, sehingga kanal yang dipilih adalah Sensor 2, yaitu sensor Cahaya."],
+["Arah aliran data pada MUX adalah...","Banyak input menjadi satu output","Satu input menjadi banyak output","Komputer ke aktuator","Digital ke analog","Sesuai matriks komponen, MUX menggabungkan banyak sumber menjadi satu jalur (banyak ke satu). Kebalikannya dilakukan demultiplexer."],
+["Arah kerja decoder alamat pada DAS adalah...","Address menjadi Channel","Analog menjadi Digital","Channel menjadi Address","Komputer menjadi Aktuator","Decoder menerima kode alamat biner dari komputer lalu menentukan kanal mana yang aktif (address ke channel)."],
+["Bilangan digital 128 dikirim ke DAC 8-bit dengan rentang 0-5 V. Tegangan keluarannya sekitar...","2,5 V","1,25 V","5,0 V","0,5 V","Vout = (128/256) x 5 V = 2,5 V. Ini kebalikan dari contoh ADC yang mengubah 2,5 V menjadi 128."],
+["Apa fungsi amplifier (signal conditioning) pada DAS?","Menyesuaikan/memperkuat level sinyal agar sesuai rentang optimal ADC","Mengubah sinyal analog menjadi biner","Memilih kanal sensor","Menahan output komputer","Sinyal mentah sensor sering terlalu lemah untuk dibaca akurat, sehingga perlu dikuatkan agar mengisi rentang baca ADC (0-5 V)."],
+["Sinyal mentah sensor 0,6 V dikuatkan amplifier dengan gain 5. Tegangan keluarannya adalah...","3,0 V","0,12 V","5,6 V","30 V","Vout = Gain x Vin = 5 x 0,6 V = 3,0 V, masih di dalam kapasitas maksimal ADC 0-5 V."],
+["Sinyal sensor 0,25 V ingin dikuatkan hingga mendekati 5 V. Gain yang dibutuhkan adalah...","20","5","10","50","Gain = Vout / Vin = 5 V / 0,25 V = 20."],
+["Mengapa sinyal sensor perlu dikuatkan sebelum masuk ke ADC?","Agar sinyal memanfaatkan rentang ADC dan terbaca lebih akurat","Agar sinyal berubah menjadi digital","Agar sensor menjadi lebih murah","Agar MUX tidak diperlukan","Sinyal yang terlalu kecil hanya memakai sedikit anak tangga ADC sehingga resolusi efektif rendah dan mudah terganggu noise."],
+["Fungsi utama ADC (Analog-to-Digital Converter) adalah...","Mengubah sinyal analog menjadi data digital","Mengubah data digital menjadi sinyal analog","Memilih satu dari banyak input","Menguatkan sinyal lemah","ADC mengubah tegangan analog kontinu menjadi angka biner diskrit agar dapat diproses komputer (arah: sensor ke komputer)."],
+["Keluaran ADC jika digambarkan terhadap waktu berbentuk...","Anak tangga diskrit","Gelombang sinus mulus","Garis lurus tanpa perubahan","Pulsa tunggal","ADC memotong kurva mulus menjadi level-level diskrit sehingga tampak seperti anak tangga."],
+["Apa yang dimaksud error kuantisasi?","Selisih antara sinyal analog kontinu (input) dan sinyal digital diskrit (output)","Kesalahan pengetikan program kontrol","Kerusakan sensor akibat panas","Kegagalan MUX memilih kanal","Karena nilai kontinu dibulatkan ke anak tangga terdekat, selalu ada selisih kecil yang disebut error kuantisasi."],
+["ADC 8-bit memiliki berapa jumlah level (anak tangga)?","256","8","128","1024","Jumlah level = 2^8 = 256."],
+["Resolusi ADC 8-bit pada rentang 0-5 V adalah sekitar...","19,53 mV per LSB","4,88 mV per LSB","78,1 mV per LSB","1 V per LSB","Resolusi = 5 V / 256 = 0,01953 V = 19,53 mV per LSB."],
+["Sensor mengirim 2,5 V ke ADC 8-bit (0-5 V). Nilai digital yang dihasilkan adalah...","128 (10000000)","255 (11111111)","64 (01000000)","25 (00011001)","Nilai = (2,5 / 5) x 256 = 128, atau 10000000 dalam biner. ADC tidak mengirim teks \"2,5V\" melainkan angka biner proporsional."],
+["Berapa jumlah level ADC 10-bit?","1024","512","100","2048","2^10 = 1024 level."],
+["Resolusi ADC 10-bit pada rentang 0-5 V adalah sekitar...","4,88 mV per LSB","19,53 mV per LSB","9,77 mV per LSB","0,5 V per LSB","5 V / 1024 = 0,00488 V = 4,88 mV per LSB."],
+["Jika jumlah bit ADC ditambah, dampaknya adalah...","Resolusi lebih halus dan error kuantisasi berkurang","Resolusi makin kasar","Rentang tegangan otomatis bertambah","Sinyal menjadi analog kembali","Lebih banyak bit berarti lebih banyak anak tangga pada rentang yang sama, sehingga langkah tiap level lebih kecil."],
+["Apa peran komputer/PC (Otak) dalam sistem kontrol suhu pada materi ini?","Mengevaluasi data digital dengan algoritma dan mengambil keputusan, misalnya jika data 128 lebih besar dari setpoint 100 maka turunkan temperatur","Mengubah suhu langsung menjadi tegangan","Memilih kanal sensor secara fisik","Menggerakkan kipas secara langsung dengan bit biner","PC menjalankan logika kontrol (IF data > setpoint). Keputusan itu masih berupa data digital sehingga masih butuh jembatan keluar."],
+["Mengapa sistem membutuhkan DAC pada sisi output?","Karena aktuator fisik seperti kipas tidak mengerti bahasa biner","Karena komputer tidak dapat menghitung","Karena sensor menghasilkan sinyal digital","Karena MUX membutuhkan sinyal analog","Perintah digital (misal 128) harus diterjemahkan menjadi tegangan analog fungsional (0-5 V) untuk menggerakkan aktuator atau motor."],
+["Fungsi Data Output Module (DOM) adalah...","Menyalurkan perintah dari komputer dan mengunci (menahan) status output","Mengubah analog menjadi digital","Memilih satu input dari banyak sumber","Menguatkan sinyal sensor","DOM menahan dan menyalurkan output komputer (arah: komputer ke output), kemudian DAC mengubahnya menjadi tegangan analog."],
+["Pada studi kasus closed-loop kontrol suhu, alur yang benar adalah...","Suhu ruangan - Sensor, MUX, Amp, ADC - Komputer/algoritma - DOM, DAC, kipas - memengaruhi suhu ruangan kembali","Kipas - DAC - Komputer - ADC - Sensor - suhu ruangan","Komputer - suhu ruangan - kipas - sensor","Sensor - kipas - ADC - suhu ruangan","Data fisik diakuisisi menjadi digital, diproses menjadi keputusan, lalu dieksekusi sebagai aksi fisik yang memodifikasi lingkungan itu sendiri, sehingga membentuk lingkaran tertutup (loop)."],
+["Pada praktikum simulasi I/O, potensiometer berperan sebagai...","Sumber input analog yang dibaca oleh ADC","Aktuator keluaran","Pengubah digital ke analog","Pusat pemrosesan logika","Alur praktikum: potensiometer (input analog) - chip ADC - mikrokontroler (proses) - DAC/modul PWM - motor (aksi fisik)."]
+];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+let user={},items=[],ans=[],cur=0;
+const KEY=n=>"das2_kuis_"+n;
+function store(){try{return window.localStorage}catch(e){return null}}
+
+$("start").onclick=()=>{
+ const nama=$("nama").value.trim(),nim=$("nim").value.trim(),prodi=$("prodi").value;
+ if(!nama||!nim||!prodi){$("err").textContent="Nama, NIM, dan Program Studi wajib diisi.";return}
+ user={nama,nim,prodi};
+ const ls=store();let saved=null;
+ try{saved=ls&&ls.getItem(KEY(nim))}catch(e){}
+ if(saved){$("login").classList.add("hide");showResult(JSON.parse(saved),true);return}
+ items=shuffle(Q.map(q=>({q:q[0],exp:q[5],o:shuffle([{t:q[1],c:1},{t:q[2]},{t:q[3]},{t:q[4]}])})));
+ ans=new Array(items.length).fill(-1);cur=0;
+ $("login").classList.add("hide");$("quiz").classList.remove("hide");
+ $("who").textContent=nama+" | "+nim;
+ draw();
+};
+function draw(){
+ const it=items[cur];
+ $("cnt").textContent="Soal "+(cur+1)+" / "+items.length;
+ $("pb").style.width=(ans.filter(a=>a>=0).length/items.length*100)+"%";
+ $("qt").textContent=(cur+1)+". "+it.q;
+ $("ops").innerHTML=it.o.map((o,i)=>'<button class="opt'+(ans[cur]===i?" sel":"")+'" data-i="'+i+'">'+"ABCD"[i]+". "+esc(o.t)+"</button>").join("");
+ $("ops").querySelectorAll("button").forEach(b=>b.onclick=()=>{ans[cur]=+b.dataset.i;draw()});
+ $("prev").disabled=cur===0;
+ $("next").textContent=cur===items.length-1?"Selesai & Kirim":"Berikutnya";
+ $("grid").innerHTML=items.map((_,i)=>'<b class="'+(ans[i]>=0?"done ":"")+(i===cur?"now":"")+'" data-i="'+i+'">'+(i+1)+"</b>").join("");
+ $("grid").querySelectorAll("b").forEach(b=>b.onclick=()=>{cur=+b.dataset.i;draw()});
+}
+$("prev").onclick=()=>{if(cur>0){cur--;draw()}};
+$("next").onclick=()=>{
+ if(cur<items.length-1){cur++;draw();return}
+ const kosong=ans.filter(a=>a<0).length;
+ if(kosong&&!confirm("Masih ada "+kosong+" soal belum dijawab. Tetap selesai? Kuis hanya dapat dikerjakan satu kali."))return;
+ if(!kosong&&!confirm("Selesai dan kirim jawaban? Kuis tidak dapat diulang."))return;
+ finish();
+};
+function finish(){
+ const rv=items.map((it,i)=>({q:it.q,exp:it.exp,o:it.o.map(o=>o.t),k:it.o.findIndex(o=>o.c),p:ans[i]}));
+ const benar=rv.filter(r=>r.p===r.k).length;
+ const res={user,benar,total:rv.length,nilai:Math.round(benar/rv.length*1000)/10,waktu:new Date().toLocaleString("id-ID"),rv};
+ try{const ls=store();ls&&ls.setItem(KEY(user.nim),JSON.stringify(res))}catch(e){}
+ $("quiz").classList.add("hide");showResult(res,false);
+}
+function showResult(r,old){
+ const u=r.user,n=r.nilai;
+ const pred=n>=85?"Sangat Baik":n>=70?"Baik":n>=55?"Cukup":"Perlu Belajar Lagi";
+ $("result").classList.remove("hide");
+ $("result").innerHTML=
+ (old?'<p class="warn noprint">NIM ini sudah pernah mengerjakan kuis. Berikut hasil tersimpan Anda.</p>':"")+
+ '<h2 style="margin-top:0;color:var(--navy)">Hasil Kuis DAS - Pertemuan 2</h2>'+
+ '<table class="meta"><tr><td>Nama</td><td>: <b>'+esc(u.nama)+'</b></td></tr><tr><td>NIM</td><td>: <b>'+esc(u.nim)+'</b></td></tr><tr><td>Program Studi</td><td>: <b>'+esc(u.prodi)+'</b></td></tr><tr><td>Waktu</td><td>: '+esc(r.waktu)+'</td></tr></table>'+
+ '<div class="score"><div class="n">'+n+'</div><div>Benar <b>'+r.benar+'</b> dari '+r.total+' soal | Salah/kosong '+(r.total-r.benar)+' | Predikat: <b>'+pred+'</b></div></div>'+
+ '<div class="noprint" style="text-align:center;margin:14px 0"><button onclick="window.print()">Simpan ke PDF / Cetak</button> <span style="font-size:.85rem;color:#555">(pilih "Save as PDF" pada dialog cetak)</span></div>'+
+ '<h3 style="color:var(--navy)">Pembahasan</h3>'+
+ r.rv.map((x,i)=>{const ok=x.p===x.k;
+  return '<div class="rv '+(ok?"ok":"no")+'"><b>'+(i+1)+'. '+esc(x.q)+'</b><ul style="list-style:none;padding-left:0;margin:6px 0">'+
+  x.o.map((t,j)=>'<li>'+(j===x.k?'<span class="c">':j===x.p?'<span class="w">':'<span>')+"ABCD"[j]+". "+esc(t)+(j===x.k?" (Jawaban benar)":j===x.p?" (Jawaban Anda)":"")+'</span></li>').join("")+'</ul>'+
+  (x.p<0?'<div class="w">Tidak dijawab</div>':"")+'<div class="exp"><b>Pembahasan:</b> '+esc(x.exp)+'</div></div>'}).join("");
+ window.scrollTo(0,0);
+}
+</script>
+</body></html>
